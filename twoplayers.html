@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Player Chess Game</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream-color: #F5F1DE;
+            --green-color: #718E55;
+            --light-green: #E8F0E3;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            margin: 0;
+            padding-top: 70px;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-bottom: 20px;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            max-width: 1200px;
+            width: 100%;
+            align-items: flex-start;
+        }
+
+        #board {
+            width: 600px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .white-1e1d7 {
+            background-color: var(--cream-color) !important;
+        }
+
+        .black-3c85d {
+            background-color: var(--green-color) !important;
+        }
+
+        .game-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .status {
+            background-color: var(--cream-color);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 550;
+            display: inline-block;
+            text-align: center;
+        }
+
+        #resetBtn {
+            background-color: var(--green-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: 550;
+            transition: opacity 0.2s;
+        }
+
+        #resetBtn:hover {
+            opacity: 0.9;
+        }
+
+        #showHistoryBtn {
+    background-color: var(--green-color);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 18px;
+    cursor: pointer;
+    font-weight: 550;
+    transition: opacity 0.2s;
+}
+
+#showHistoryBtn:hover {
+    opacity: 0.9;
+}
+
+        .move-history {
+            background-color: var(--light-green);
+            border-radius: 12px;
+            padding: 20px;
+            flex-grow: 1;
+            min-height: 300px;
+            display: none; /* Initially hidden */
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .move-history h2 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            font-weight: 300;
+        }
+
+        #moveList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        #moveList li {
+            padding: 5px 0;
+        }
+
+        /* On desktop: hide the 'Show History' button and show the history box */
+        @media (min-width: 1025px) {
+            
+            #showHistoryBtn {
+                display: none;
+            }
+
+            .move-history {
+                display: block; /* History box is visible on desktop */
+            }
+        }
+
+        /* On mobile: show the 'Show History' button and hide the history box initially */
+        @media (max-width: 1024px) {
+            #showHistoryBtn {
+                display: block;
+            }
+
+            .move-history {
+                display: none; /* Initially hidden */
+            }
+
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #board {
+                width: 100%;
+                max-width: 600px;
+            }
+
+            .game-info {
+                width: 100%;
+                max-width: 600px;
+            }
+
+            /* Disable scrolling when history box is hidden */
+            body.no-scroll {
+                overflow: hidden;
+                padding-top: 40px;
+            }
+        }
+    </style>
+</head>
+<body class="no-scroll"> <!-- Initially restrict scrolling -->
+    <div class="container">
+        <div id="board"></div>
+        <div class="game-info">
+            <div id="status" class="status">WHITE'S TURN</div>
+            <button id="resetBtn">RESET GAME</button>
+            <button id="showHistoryBtn">SHOW HISTORY</button>
+            <div class="move-history">
+                <h2>Move history</h2>
+                <ul id="moveList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script>
+        let board = null;
+        let game = new Chess();
+        let $status = $('#status');
+        let $moveList = $('#moveList');
+        let $moveHistory = $('.move-history');
+        let $showHistoryBtn = $('#showHistoryBtn');
+
+        function onDragStart(source, piece, position, orientation) {
+            if (game.game_over()) return false;
+
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+        }
+
+        function onDrop(source, target) {
+            let move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+
+            if (move === null) return 'snapback';
+
+            updateStatus();
+            updateMoveList(move);
+        }
+
+        function onSnapEnd() {
+            board.position(game.fen());
+        }
+
+        function updateStatus() {
+            let moveColor = game.turn() === 'w' ? "WHITE'S" : "BLACK'S";
+            let status = moveColor + ' TURN';
+
+            if (game.in_checkmate()) {
+                status = 'CHECKMATE - ' + (game.turn() === 'w' ? "BLACK" : "WHITE") + ' WINS';
+            } else if (game.in_draw()) {
+                status = 'GAME OVER - DRAW';
+            } else if (game.in_check()) {
+                status = moveColor + ' TURN (CHECK)';
+            }
+
+            $status.text(status);
+        }
+
+        function updateMoveList(move) {
+            let moveNumber = Math.floor((game.history().length + 1) / 2);
+            let moveText = moveNumber + '. ' + move.san;
+            if (game.turn() === 'w') {
+                moveText = moveNumber + '... ' + move.san;
+            }
+            $moveList.prepend('<li>' + moveText + '</li>');
+        }
+
+        let config = {
+            draggable: true,
+            position: 'start',
+            onDragStart: onDragStart,
+            onDrop: onDrop,
+            onSnapEnd: onSnapEnd,
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        };
+
+        board = Chessboard('board', config);
+
+        updateStatus();
+
+        $('#resetBtn').on('click', function() {
+            game.reset();
+            board.start();
+            updateStatus();
+            $moveList.empty();
+            if ($(window).width() <= 1024) {
+                $('body').removeClass('no-scroll'); // Allow scrolling when reset is clicked
+            }
+        });
+
+        // Show/Hide the move history box on mobile
+        $showHistoryBtn.on('click', function() {
+            $moveHistory.toggle(); // Toggle visibility of the history box
+            $('body').toggleClass('no-scroll'); // Disable/Enable scrolling on mobile
+        });
+
+        $(window).resize(function() {
+            board.resize();
+        });
+    </script>
+</body>
+</html>

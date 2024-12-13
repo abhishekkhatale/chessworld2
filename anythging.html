@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Chess Game</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream-color: #F5F1DE;
+            --green-color: #718E55;
+            --light-green: #E8F0E3;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            max-width: 1200px;
+            width: 100%;
+            align-items: flex-start;
+        }
+
+        #board {
+            width: 600px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .white-1e1d7 {
+            background-color: var(--cream-color) !important;
+        }
+
+        .black-3c85d {
+            background-color: var(--green-color) !important;
+        }
+
+        .game-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .status {
+            background-color: var(--cream-color);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 550;
+            text-align: center;
+        }
+
+        #resetBtn {
+            background-color: var(--green-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: 550;
+            transition: opacity 0.2s;
+        }
+
+        #resetBtn:hover {
+            opacity: 0.9;
+        }
+
+        .move-history {
+            background-color: var(--light-green);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .move-history h2 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            font-weight: 300;
+        }
+
+        #moveList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        #moveList li {
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="board"></div>
+        <div class="game-info">
+            <div id="status" class="status">WHITE'S TURN</div>
+            <button id="resetBtn">RESET GAME</button>
+            <div class="move-history">
+                <h2>Move history</h2>
+                <ul id="moveList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script>
+        let board = null;
+        let game = new Chess();
+        let $status = $('#status');
+        let $moveList = $('#moveList');
+        let clickedSquare = null;
+
+        // Detect clicks on squares using jQuery
+        $('#board').on('click', '.square-55d63', function() {
+            const square = $(this).data('square');
+            handleSquareClick(square);
+        });
+
+        function handleSquareClick(square) {
+            if (clickedSquare === null) {
+                clickedSquare = square; // First square clicked
+                highlightSquare(square);
+            } else {
+                const move = game.move({
+                    from: clickedSquare,
+                    to: square,
+                    promotion: 'q' // Always promote to a queen
+                });
+
+                if (move) {
+                    updateStatus();
+                    updateMoveList(move);
+                    board.position(game.fen());
+                }
+                
+                removeHighlights(); // Remove highlights
+                clickedSquare = null; // Reset clicked square
+            }
+        }
+
+        function highlightSquare(square) {
+            $(`#board .square-${square}`).css('background-color', '#ffeb3b');
+        }
+
+        function removeHighlights() {
+            $('#board .square-55d63').css('background-color', '');
+            $('.white-1e1d7').css('background-color', 'var(--cream-color)');
+            $('.black-3c85d').css('background-color', 'var(--green-color)');
+        }
+
+        function updateStatus() {
+            let moveColor = game.turn() === 'w' ? "WHITE'S" : "BLACK'S";
+            let status = moveColor + ' TURN';
+
+            if (game.in_checkmate()) {
+                status = 'GAME OVER - ' + (moveColor === "WHITE'S" ? 'BLACK' : 'WHITE') + ' WINS';
+            } else if (game.in_draw()) {
+                status = 'GAME OVER - DRAW';
+            } else if (game.in_check()) {
+                status = moveColor + ' TURN (CHECK)';
+            }
+
+            $status.text(status);
+        }
+
+        function updateMoveList(move) {
+            const moveNumber = Math.ceil(game.history().length / 2);
+            const moveText = moveNumber + '. ' + move.san;
+            $moveList.prepend(`<li>${moveText}</li>`);
+        }
+
+        // Initialize Chessboard.js
+        let config = {
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        };
+
+        board = Chessboard('board', config);
+        updateStatus();
+
+        // Reset button functionality
+        $('#resetBtn').on('click', function() {
+            game.reset();
+            board.start();
+            updateStatus();
+            $moveList.empty();
+            clickedSquare = null;
+        });
+    </script>
+</body>
+</html>
